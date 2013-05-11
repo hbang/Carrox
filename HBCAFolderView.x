@@ -40,6 +40,10 @@
 
 - (float)realHeight {
 	return _cellHeight * _toDos.count;
+- (void)dealloc {
+	[_tableView release];
+	[_toDos release];
+	[super dealloc];
 }
 
 #pragma mark - UITableViewDataSource

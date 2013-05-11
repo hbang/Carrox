@@ -1,7 +1,7 @@
 Package: ws.hbang.carrox
 Name: Carrox
 Depends: firmware (>= 6.0), com.apextweaks.velox
-Version: 1.0
+Version: 1.1~beta
 Architecture: iphoneos-arm
 Description: Velox folder for the CARROT to-do list app
 Maintainer: HASHBANG Productions <carrox@hbang.ws>
