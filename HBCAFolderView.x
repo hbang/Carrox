@@ -1,11 +1,16 @@
 #import "HBCAFolderView.h"
 #import <SpringBoard/SBApplicationController.h>
+#import <SpringBoard/SBBulletinListCell.h>
 
-#define kHBCAFont [UIFont boldSystemFontOfSize:16.f]
-#define kHBCATextFieldFont [UIFont systemFontOfSize:16.f]
+#define kHBCAFont [UIFont boldSystemFontOfSize:20.f]
+#define kHBCATextFieldFont [UIFont systemFontOfSize:20.f]
 #define kHBCANoToDosText @"No To-Dos" // this feels dirty, but carrot only supports english anyway so...
 #define kHBCAPullToAddText @"Pull down to add item"
 #define kHBCAReleaseToAddText @"Release!"
+
+@interface HBCAFolderView (Private)
+- (void)hideTextFieldWithDoneTapped:(BOOL)doneTapped;
+@end
 
 @implementation HBCAFolderView
 + (int)folderHeight {
@@ -37,7 +42,11 @@
 		_textField.contentVerticalAlignment = UIControlContentVerticalAlignmentCenter;
 		[_tableView addSubview:_textField];
 
+#if DEBUG
+		NSArray *items = [[NSDictionary dictionaryWithContentsOfFile:[[[%c(SBApplicationController) sharedInstance] applicationWithDisplayIdentifier:@"com.grailr.CARROT2"].sandboxPath stringByAppendingString:@"/Documents/todo.archive"]] objectForKey:@"$objects"];
+#else
 		NSArray *items = [[NSDictionary dictionaryWithContentsOfFile:[[[%c(SBApplicationController) sharedInstance] applicationWithDisplayIdentifier:@"com.grailr.CARROT"].sandboxPath stringByAppendingString:@"/Documents/todo.archive"]] objectForKey:@"$objects"];
+#endif
 		NSMutableArray *newToDos = [NSMutableArray array];
 
 		for (id item in items) {
@@ -55,25 +64,54 @@
 }
 
 - (float)realHeight {
-	return _tableView.contentSize.height;
+	return _toDos.count ? _tableView.contentSize.height : _cellHeight * 3.f;
 }
 
-- (void)viewTapped:(UITapGestureRecognizer *)gestureRecogniser {
-	[_textField resignFirstResponder];
-	_textField.text = @"";
+- (void)hideTextField {
+	[self hideTextFieldWithDoneTapped:NO];
+}
 
-	[self removeGestureRecognizer:gestureRecogniser];
-
-	[UIView animateWithDuration:0.3f animations: ^{
-		_tableView.contentInset = UIEdgeInsetsZero;
-	}];
+- (void)hideTextFieldWithDoneTapped:(BOOL)doneTapped {
+	if (_isDragging || !_isShowingTextField) {
+		return;
+	}
 
 	_isShowingTextField = NO;
+
+	[_textField resignFirstResponder];
+
+	if (_gestureRecognizer) {
+		[self removeGestureRecognizer:_gestureRecognizer];
+		[_gestureRecognizer release];
+		_gestureRecognizer = nil;
+	}
+
+	if (_textField.text && ![_textField.text isEqualToString:@""]) {
+#if DEBUG
+		[[UIApplication sharedApplication] openURL:[NSURL URLWithString:[NSString stringWithFormat:@"carrot2://addTask/?%@", [_textField.text stringByAddingPercentEscapesUsingEncoding:NSUTF8StringEncoding]]]];
+#else
+		[[UIApplication sharedApplication] openURL:[NSURL URLWithString:[NSString stringWithFormat:@"carrot://addTask/?%@", [_textField.text stringByAddingPercentEscapesUsingEncoding:NSUTF8StringEncoding]]]];
+#endif
+
+		NSMutableArray *newToDos = [_toDos mutableCopy];
+		[newToDos insertObject:_textField.text atIndex:0];
+		_toDos = [newToDos copy];
+
+		[_tableView reloadData];
+	} else {
+		[UIView animateWithDuration:0.3f animations:^{
+			_tableView.contentInset = UIEdgeInsetsZero;
+		}];
+	}
+
+	_textField.text = @"";
 }
 
 - (void)dealloc {
 	[_tableView release];
+	[_textField release];
 	[_toDos release];
+	[_gestureRecognizer release];
 	[super dealloc];
 }
 
@@ -90,13 +128,11 @@
 - (UITableViewCell *)tableView:(UITableView *)tableView cellForRowAtIndexPath:(NSIndexPath *)indexPath {
 	static NSString *CellIdentifier = @"CarroxCell";
 
-	UITableViewCell *cell = [tableView dequeueReusableCellWithIdentifier:CellIdentifier];
+	SBBulletinListCell *cell = [tableView dequeueReusableCellWithIdentifier:CellIdentifier];
 
 	if (!cell) {
-		cell = [[[UITableViewCell alloc] initWithStyle:UITableViewCellStyleDefault reuseIdentifier:CellIdentifier] autorelease];
+		cell = [[[%c(SBBulletinListCell) alloc] initWithLinenView:nil reuseIdentifier:CellIdentifier] autorelease];
 		cell.textLabel.textColor = [UIColor whiteColor];
-		cell.textLabel.font = kHBCAFont;
-		cell.textLabel.lineBreakMode = UILineBreakModeTailTruncation;
 		cell.selectionStyle = UITableViewCellSelectionStyleNone;
 	}
 
@@ -111,10 +147,20 @@
 }
 
 - (CGFloat)tableView:(UITableView *)tableView heightForRowAtIndexPath:(NSIndexPath *)indexPath {
-	return _cellHeight;
+	return _toDos.count ? _cellHeight : _cellHeight * 3.f;
 }
 
 #pragma mark - UITextFieldDelegate
+
+- (BOOL)textFieldShouldReturn:(UITextField *)textField {
+	[self hideTextFieldWithDoneTapped:YES];
+
+	return NO;
+}
+
+- (void)textFieldDidEndEditing:(UITextField *)textField {
+	[self hideTextFieldWithDoneTapped:NO];
+}
 
 #pragma mark - UIScrollViewDelegate
 
@@ -136,7 +182,7 @@
 			_tableView.contentInset = UIEdgeInsetsMake(-_tableView.contentOffset.y, 0, 0, 0);
 		}
 	} else if (_isDragging && _tableView.contentOffset.y < 0) {
-		_textField.placeholder = _tableView.contentOffset.y < -_cellHeight ? kHBCAReleaseToAddText : kHBCAPullToAddText;
+		_textField.placeholder = _tableView.contentOffset.y <= -_cellHeight ? kHBCAReleaseToAddText : kHBCAPullToAddText;
 	}
 }
 
@@ -151,10 +197,11 @@
 		_isShowingTextField = YES;
 
 		[_textField becomeFirstResponder];
+		[_textField performSelector:@selector(becomeFirstResponder) withObject:nil afterDelay:0];
 		_textField.placeholder = @"";
 
-		UITapGestureRecognizer *gestureRecogniser = [[[UITapGestureRecognizer alloc] initWithTarget:self action:@selector(viewTapped:)] autorelease];
-		[self addGestureRecognizer:gestureRecogniser];
+		_gestureRecognizer = [[UITapGestureRecognizer alloc] initWithTarget:self action:@selector(hideTextField)];
+		[self addGestureRecognizer:_gestureRecognizer];
 
 		[UIView animateWithDuration:0.3f animations:^{
 			_tableView.contentInset = UIEdgeInsetsMake(_cellHeight, 0, 0, 0);

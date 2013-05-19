@@ -27,6 +27,7 @@
 	<key>VeloxAppIDs</key>
 	<array>
 		<string>com.grailr.CARROT</string>
+		<string>com.grailr.CARROT2</string>
 	</array>
 	<key>UIDeviceFamily</key>
 	<array>

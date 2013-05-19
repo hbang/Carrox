@@ -7,5 +7,6 @@
 	float _cellHeight;
 	BOOL _isShowingTextField;
 	BOOL _isDragging;
+	UITapGestureRecognizer *_gestureRecognizer;
 }
 @end
