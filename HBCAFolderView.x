@@ -2,8 +2,8 @@
 #import <SpringBoard/SBApplicationController.h>
 #import <SpringBoard/SBBulletinListCell.h>
 
-#define kHBCAFont [UIFont boldSystemFontOfSize:20.f]
-#define kHBCATextFieldFont [UIFont systemFontOfSize:20.f]
+#define kHBCAFont [UIFont boldSystemFontOfSize:18.f]
+#define kHBCATextFieldFont [UIFont systemFontOfSize:18.f]
 #define kHBCANoToDosText @"No To-Dos" // this feels dirty, but carrot only supports english anyway so...
 #define kHBCAPullToAddText @"Pull down to add item"
 #define kHBCAReleaseToAddText @"Release!"
