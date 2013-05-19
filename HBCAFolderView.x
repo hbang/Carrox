@@ -23,13 +23,14 @@
 	if (self) {
 		_cellHeight = [@"X" sizeWithFont:kHBCAFont].height + 20.f;
 
-		_tableView = [[UITableView alloc] initWithFrame:frame];
+		_tableView = [[UITableView alloc] initWithFrame:frame style:UITableViewStylePlain];
 		_tableView.autoresizingMask = UIViewAutoresizingFlexibleWidth | UIViewAutoresizingFlexibleHeight;
 		_tableView.dataSource = self;
 		_tableView.delegate = self;
-		_tableView.backgroundView = [[[UIView alloc] init] autorelease];
+		_tableView.backgroundView = nil;
 		_tableView.backgroundColor = [UIColor clearColor];
 		_tableView.separatorStyle = UITableViewCellSeparatorStyleNone;
+		_tableView.separatorColor = [UIColor colorWithPatternImage:[UIImage imageNamed:@"VeloxCellSeparator"]]; // normal one gets heighted, so bensge made his own one! <3 bensge.
 		[self addSubview:_tableView];
 
 		_textField = [[UITextField alloc] initWithFrame:CGRectMake(10.f, -_cellHeight, frame.size.width - 20.f, _cellHeight)];
@@ -134,6 +135,7 @@
 		cell = [[[%c(SBBulletinListCell) alloc] initWithLinenView:nil reuseIdentifier:CellIdentifier] autorelease];
 		cell.textLabel.textColor = [UIColor whiteColor];
 		cell.selectionStyle = UITableViewCellSelectionStyleNone;
+		cell.bulletinAccessoryStyle = SBBulletinListCellAccessoryStyleDot;
 	}
 
 	if (_toDos.count) {
